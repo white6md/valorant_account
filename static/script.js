@@ -1,255 +1,312 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const navHome = document.getElementById('nav-home');
+    const navHistory = document.getElementById('nav-history');
+    const navLogin = document.getElementById('nav-login');
+    const navRegister = document.getElementById('nav-register');
+    const navLogout = document.getElementById('nav-logout');
+    const userDisplay = document.getElementById('user-display');
+    
+    const homeSection = document.getElementById('home-section');
+    const authSection = document.getElementById('auth-section');
+    const historySection = document.getElementById('history-section');
+    
+    const loginFormContainer = document.getElementById('login-form-container');
+    const registerFormContainer = document.getElementById('register-form-container');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const switchToRegister = document.getElementById('switch-to-register');
+    const switchToLogin = document.getElementById('switch-to-login');
+    
+    const notification = document.getElementById('notification');
+    const buyButtons = document.querySelectorAll('.buy-btn');
+    const ordersList = document.getElementById('orders-list');
+
     // State
     let currentUser = null;
 
-    // Elements
-    const sections = {
-        home: document.getElementById('home-section'),
-        auth: document.getElementById('auth-section'),
-        history: document.getElementById('history-section')
-    };
+    // --- LocalStorage Helpers ---
+    const USERS_KEY = 'g4_users';
+    const ORDERS_KEY = 'g4_orders';
+    const SESSION_KEY = 'g4_session';
 
-    const navLinks = {
-        home: document.getElementById('nav-home'),
-        history: document.getElementById('nav-history'),
-        login: document.getElementById('nav-login'),
-        register: document.getElementById('nav-register'),
-        logout: document.getElementById('nav-logout')
-    };
-
-    const forms = {
-        login: document.getElementById('login-form'),
-        register: document.getElementById('register-form')
-    };
-
-    const userDisplay = document.getElementById('user-display');
-    const notification = document.getElementById('notification');
-
-    // Initialization
-    checkAuthStatus();
-    initSpotlight();
-
-    // Navigation Handlers
-    navLinks.home.addEventListener('click', (e) => { e.preventDefault(); showSection('home'); });
-    navLinks.history.addEventListener('click', (e) => { e.preventDefault(); showSection('history'); loadOrders(); });
-    navLinks.login.addEventListener('click', (e) => { e.preventDefault(); showSection('auth'); showAuthForm('login'); });
-    navLinks.register.addEventListener('click', (e) => { e.preventDefault(); showSection('auth'); showAuthForm('register'); });
-    navLinks.logout.addEventListener('click', (e) => { e.preventDefault(); logout(); });
-
-    document.getElementById('switch-to-register').addEventListener('click', (e) => { e.preventDefault(); showAuthForm('register'); });
-    document.getElementById('switch-to-login').addEventListener('click', (e) => { e.preventDefault(); showAuthForm('login'); });
-
-    // Event Delegation for Buy Buttons
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('buy-btn')) {
-            const name = e.target.dataset.name;
-            const price = e.target.dataset.price;
-            buyProduct(name, price);
-        }
-    });
-
-    // Form Handlers
-    forms.login.addEventListener('submit', handleLogin);
-    forms.register.addEventListener('submit', handleRegister);
-
-    // Functions
-    function showSection(sectionName) {
-        Object.values(sections).forEach(el => el.classList.remove('active-section'));
-        Object.values(sections).forEach(el => el.classList.add('hidden-section'));
-
-        sections[sectionName].classList.remove('hidden-section');
-        sections[sectionName].classList.add('active-section');
-
-        // Update nav active state
-        document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
-        if (navLinks[sectionName]) navLinks[sectionName].classList.add('active');
+    function getUsers() {
+        return JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
     }
 
-    function showAuthForm(type) {
-        document.getElementById('login-form-container').style.display = type === 'login' ? 'block' : 'none';
-        document.getElementById('register-form-container').style.display = type === 'register' ? 'block' : 'none';
+    function saveUser(username, password) {
+        const users = getUsers();
+        if (users[username]) return false; // User exists
+        users[username] = { password }; // In real app, hash this!
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        return true;
     }
 
-    function showNotification(message) {
-        notification.textContent = message;
-        notification.classList.add('show');
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
+    function verifyUser(username, password) {
+        const users = getUsers();
+        return users[username] && users[username].password === password;
     }
 
-    async function checkAuthStatus() {
-        try {
-            const res = await fetch('/api/user_info');
-            const data = await res.json();
-            if (data.is_authenticated) {
-                currentUser = data.username;
-                updateUIForLoggedIn();
-            } else {
-                updateUIForLoggedOut();
-            }
-        } catch (err) {
-            console.error('Auth check failed', err);
-        }
+    function getSession() {
+        return localStorage.getItem(SESSION_KEY);
     }
 
-    function updateUIForLoggedIn() {
-        navLinks.login.style.display = 'none';
-        navLinks.register.style.display = 'none';
-        navLinks.history.style.display = 'inline-block';
-        navLinks.logout.style.display = 'inline-block';
-        userDisplay.style.display = 'inline-block';
-        userDisplay.textContent = `Welcome, ${currentUser}`;
+    function setSession(username) {
+        localStorage.setItem(SESSION_KEY, username);
+        currentUser = username;
     }
 
-    function updateUIForLoggedOut() {
-        navLinks.login.style.display = 'inline-block';
-        navLinks.register.style.display = 'inline-block';
-        navLinks.history.style.display = 'none';
-        navLinks.logout.style.display = 'none';
-        userDisplay.style.display = 'none';
+    function clearSession() {
+        localStorage.removeItem(SESSION_KEY);
         currentUser = null;
     }
 
-    async function handleLogin(e) {
+    function getOrders(username) {
+        const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
+        return allOrders.filter(order => order.username === username);
+    }
+
+    function saveOrder(username, product_name, accounts) {
+        const allOrders = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
+        const newOrder = {
+            id: Date.now(),
+            username,
+            product_name,
+            accounts,
+            created_at: new Date().toLocaleString()
+        };
+        allOrders.push(newOrder);
+        localStorage.setItem(ORDERS_KEY, JSON.stringify(allOrders));
+        return newOrder;
+    }
+
+    // --- Initialization ---
+    function init() {
+        const sessionUser = getSession();
+        if (sessionUser) {
+            currentUser = sessionUser;
+            updateUIState(true);
+        } else {
+            updateUIState(false);
+        }
+        setupSpotlightEffect();
+    }
+
+    // --- UI Updates ---
+    function updateUIState(isLoggedIn) {
+        if (isLoggedIn) {
+            navLogin.style.display = 'none';
+            navRegister.style.display = 'none';
+            navHistory.style.display = 'inline-block';
+            navLogout.style.display = 'inline-block';
+            userDisplay.textContent = `Hi, ${currentUser}`;
+            userDisplay.style.display = 'inline-block';
+        } else {
+            navLogin.style.display = 'inline-block';
+            navRegister.style.display = 'inline-block';
+            navHistory.style.display = 'none';
+            navLogout.style.display = 'none';
+            userDisplay.style.display = 'none';
+            showSection(homeSection); // Redirect to home if logged out
+        }
+    }
+
+    function showSection(section) {
+        homeSection.classList.add('hidden-section');
+        homeSection.classList.remove('active-section');
+        authSection.classList.add('hidden-section');
+        authSection.classList.remove('active-section');
+        historySection.classList.add('hidden-section');
+        historySection.classList.remove('active-section');
+
+        section.classList.remove('hidden-section');
+        section.classList.add('active-section');
+    }
+
+    function showNotification(message, type = 'success') {
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        setTimeout(() => {
+            notification.className = 'notification';
+        }, 3000);
+    }
+
+    // --- Event Listeners ---
+    
+    // Navigation
+    navHome.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(homeSection);
+    });
+
+    navLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(authSection);
+        loginFormContainer.style.display = 'block';
+        registerFormContainer.style.display = 'none';
+    });
+
+    navRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(authSection);
+        loginFormContainer.style.display = 'none';
+        registerFormContainer.style.display = 'block';
+    });
+
+    navHistory.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
+        loadOrderHistory();
+        showSection(historySection);
+    });
+
+    navLogout.addEventListener('click', (e) => {
+        e.preventDefault();
+        clearSession();
+        updateUIState(false);
+        showNotification('Logged out successfully');
+    });
+
+    // Auth Forms
+    switchToRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginFormContainer.style.display = 'none';
+        registerFormContainer.style.display = 'block';
+    });
+
+    switchToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        registerFormContainer.style.display = 'none';
+        loginFormContainer.style.display = 'block';
+    });
+
+    loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = document.getElementById('login-username').value;
         const password = document.getElementById('login-password').value;
 
-        try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                currentUser = data.username;
-                updateUIForLoggedIn();
-                showSection('home');
-                showNotification('Login successful!');
-                forms.login.reset();
-            } else {
-                showNotification(data.error || 'Login failed');
-            }
-        } catch (err) {
-            showNotification('An error occurred');
+        if (verifyUser(username, password)) {
+            setSession(username);
+            updateUIState(true);
+            showSection(homeSection);
+            showNotification('Login successful');
+            loginForm.reset();
+        } else {
+            showNotification('Invalid username or password', 'error');
         }
-    }
+    });
 
-    async function handleRegister(e) {
+    registerForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = document.getElementById('register-username').value;
         const password = document.getElementById('register-password').value;
 
-        try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                showNotification('Registration successful! Please login.');
-                showAuthForm('login');
-                forms.register.reset();
-            } else {
-                showNotification(data.error || 'Registration failed');
-            }
-        } catch (err) {
-            showNotification('An error occurred');
+        if (saveUser(username, password)) {
+            showNotification('Registration successful! Please login.');
+            registerForm.reset();
+            registerFormContainer.style.display = 'none';
+            loginFormContainer.style.display = 'block';
+        } else {
+            showNotification('Username already exists', 'error');
         }
-    }
+    });
 
-    async function logout() {
-        await fetch('/api/logout', { method: 'POST' });
-        updateUIForLoggedOut();
-        showSection('home');
-        showNotification('Logged out');
-    }
-
-    async function buyProduct(productName, productPrice) {
-        if (!currentUser) {
-            showNotification('Please login to purchase');
-            showSection('auth');
-            showAuthForm('login');
-            return;
-        }
-
-        if (!confirm(`Confirm purchase of "${productName}" for $${productPrice}?`)) return;
-
-        try {
-            const res = await fetch('/api/buy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_name: productName })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                showNotification('Purchase successful! Check your history.');
-                showSection('history');
-                loadOrders();
-            } else {
-                showNotification(data.error || 'Purchase failed');
-            }
-        } catch (err) {
-            showNotification('An error occurred');
-        }
-    }
-
-    async function loadOrders() {
-        const list = document.getElementById('orders-list');
-        list.innerHTML = '<p>Loading...</p>';
-
-        try {
-            const res = await fetch('/api/orders');
-            const data = await res.json();
-
-            if (data.orders.length === 0) {
-                list.innerHTML = '<p>No orders found.</p>';
+    // Buying Logic
+    buyButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!currentUser) {
+                showNotification('Please login to purchase', 'error');
+                showSection(authSection);
                 return;
             }
 
-            list.innerHTML = data.orders.map(order => `
-                <div class="order-item spotlight-card">
-                    <div class="order-header">
-                        <h3>${order.product_name}</h3>
-                        <span class="order-date">${order.created_at}</span>
-                    </div>
-                    <div class="account-list">
-                        ${order.accounts.map(acc => `
-                            <div class="account-item">
-                                <div><span class="acc-label">User:</span>${acc.username}</div>
-                                <div><span class="acc-label">Pass:</span>${acc.password}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
+            const productName = btn.dataset.name;
+            const price = btn.dataset.price;
+            
+            // Simulate processing
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
 
-            // Re-init spotlight for new items
-            initSpotlight();
-        } catch (err) {
-            list.innerHTML = '<p>Failed to load orders.</p>';
+            setTimeout(() => {
+                const accounts = generateRandomAccounts(productName);
+                saveOrder(currentUser, productName, accounts);
+                
+                btn.textContent = 'BUY NOW';
+                btn.disabled = false;
+                
+                showNotification('Purchase successful! Check Order History.');
+                
+                // Optional: Show immediate result (simple alert for now, or modal)
+                alert(`Purchase Successful!\n\nHere are your accounts:\n${accounts.map(a => `${a.username}:${a.password}`).join('\n')}\n\n(Also saved to Order History)`);
+            }, 1000);
+        });
+    });
+
+    function generateRandomAccounts(productName) {
+        let count = 10;
+        if (productName.includes('5')) count = 5;
+        if (productName.includes('(1)')) count = 1;
+
+        const accounts = [];
+        for (let i = 0; i < count; i++) {
+            accounts.push({
+                username: 'val_' + Math.random().toString(36).substring(2, 10),
+                password: Math.random().toString(36).substring(2, 14) + '!'
+            });
         }
+        return accounts;
     }
 
-    // Spotlight Effect
-    function initSpotlight() {
-        const cards = document.querySelectorAll('.spotlight-card');
+    // Order History
+    function loadOrderHistory() {
+        const orders = getOrders(currentUser);
+        ordersList.innerHTML = '';
 
+        if (orders.length === 0) {
+            ordersList.innerHTML = '<p>No orders found.</p>';
+            return;
+        }
+
+        orders.forEach(order => {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'order-card spotlight-card';
+            
+            let accountsHtml = '<ul class="account-list">';
+            order.accounts.forEach(acc => {
+                accountsHtml += `<li><span class="acc-user">${acc.username}</span> : <span class="acc-pass">${acc.password}</span></li>`;
+            });
+            accountsHtml += '</ul>';
+
+            orderCard.innerHTML = `
+                <div class="order-header">
+                    <h3>${order.product_name}</h3>
+                    <span class="order-date">${order.created_at}</span>
+                </div>
+                <div class="order-body">
+                    ${accountsHtml}
+                </div>
+            `;
+            ordersList.appendChild(orderCard);
+        });
+        
+        // Re-apply spotlight effect to new elements
+        setupSpotlightEffect(); 
+    }
+
+    // --- Effects ---
+    function setupSpotlightEffect() {
+        const cards = document.querySelectorAll('.spotlight-card');
         cards.forEach(card => {
-            card.addEventListener('mousemove', (e) => {
+            card.onmousemove = e => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-
                 card.style.setProperty('--mouse-x', `${x}px`);
                 card.style.setProperty('--mouse-y', `${y}px`);
-            });
+            };
         });
     }
+
+    // Start
+    init();
 });
