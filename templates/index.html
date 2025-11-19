@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4 Market - Valorant Accounts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">G4 MARKET</div>
+        <div class="nav-links">
+            <a href="#" id="nav-home" class="active">Home</a>
+            <a href="#" id="nav-history" style="display: none;">Order History</a>
+            <a href="#" id="nav-login">Login</a>
+            <a href="#" id="nav-register">Register</a>
+            <a href="#" id="nav-logout" style="display: none;">Logout</a>
+            <span id="user-display" style="display: none;"></span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Home Section -->
+        <section id="home-section" class="active-section">
+            <div class="hero">
+                <h1>PREMIUM VALORANT ACCOUNTS</h1>
+                <p>Get your squad ready with our instant delivery combo packs.</p>
+            </div>
+
+            <div class="product-grid">
+                <!-- Product 1 -->
+                <div class="product-card spotlight-card">
+                    <div class="product-image"
+                        style="background-image: url('https://media.valorant-api.com/agents/e370fa57-4757-3604-3648-499e1f642d3f/fullportrait.png');">
+                    </div>
+                    <div class="product-details">
+                        <div class="product-tag">BEST SELLER</div>
+                        <h2>Combo 10 Random Accounts</h2>
+                        <p class="description">Perfect for smurfing. 10 random accounts with full access.</p>
+                        <div class="price">$19.99</div>
+                        <button class="btn-primary buy-btn" data-name="Combo 10 Random Valorant Accounts"
+                            data-price="19.99">BUY NOW</button>
+                    </div>
+                </div>
+
+                <!-- Product 2 -->
+                <div class="product-card spotlight-card">
+                    <div class="product-image"
+                        style="background-image: url('https://media.valorant-api.com/agents/add6443a-41bd-e414-f6ad-e58d267f4e95/fullportrait.png');">
+                    </div>
+                    <div class="product-details">
+                        <div class="product-tag">POPULAR</div>
+                        <h2>Ranked Ready Account</h2>
+                        <p class="description">Level 20+ account, ready for competitive play immediately.</p>
+                        <div class="price">$14.99</div>
+                        <button class="btn-primary buy-btn" data-name="Ranked Ready Account (1)" data-price="14.99">BUY
+                            NOW</button>
+                    </div>
+                </div>
+
+                <!-- Product 3 -->
+                <div class="product-card spotlight-card">
+                    <div class="product-image"
+                        style="background-image: url('https://media.valorant-api.com/agents/8e253930-4c05-31dd-1b6c-968525494517/fullportrait.png');">
+                    </div>
+                    <div class="product-details">
+                        <div class="product-tag">PREMIUM</div>
+                        <h2>Skin Heavy Account</h2>
+                        <p class="description">Guaranteed 5+ Premium Skins (Vandal/Phantom). High value.</p>
+                        <div class="price">$49.99</div>
+                        <button class="btn-primary buy-btn" data-name="Skin Heavy Account (1)" data-price="49.99">BUY
+                            NOW</button>
+                    </div>
+                </div>
+
+                <!-- Product 4 -->
+                <div class="product-card spotlight-card">
+                    <div class="product-image"
+                        style="background-image: url('https://media.valorant-api.com/agents/5f8d3a7f-467b-97f3-062c-13acf203c006/fullportrait.png');">
+                    </div>
+                    <div class="product-details">
+                        <div class="product-tag">STARTER</div>
+                        <h2>Combo 5 Random Accounts</h2>
+                        <p class="description">Small pack for testing. 5 random accounts.</p>
+                        <div class="price">$9.99</div>
+                        <button class="btn-primary buy-btn" data-name="Combo 5 Random Valorant Accounts"
+                            data-price="9.99">BUY NOW</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Auth Section -->
+        <section id="auth-section" class="hidden-section">
+            <div class="auth-container spotlight-card">
+                <div id="login-form-container">
+                    <h2>Login</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="login-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Login</button>
+                        <p class="switch-auth">Don't have an account? <a href="#" id="switch-to-register">Register</a>
+                        </p>
+                    </form>
+                </div>
+
+                <div id="register-form-container" style="display: none;">
+                    <h2>Register</h2>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="register-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Register</button>
+                        <p class="switch-auth">Already have an account? <a href="#" id="switch-to-login">Login</a></p>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Order History Section -->
+        <section id="history-section" class="hidden-section">
+            <h2>Your Order History</h2>
+            <div id="orders-list">
+                <!-- Orders will be populated here -->
+            </div>
+        </section>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
